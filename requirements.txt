@@ -1,0 +1,3 @@
+lunar_python>=1.4.8
+anthropic>=0.40.0
+pillow>=10.0
