@@ -1,0 +1,30 @@
+name: 인스타 댓글 자동 답글
+
+on:
+  schedule:
+    - cron: '17,47 * * * *'   # 30분마다 (정각 피함)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '테스트 모드 (답글 달지 않고 로그만)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: comments
+  cancel-in-progress: false
+
+jobs:
+  reply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 의존성 설치
+        run: pip install lunar_python
+      - name: 댓글 확인 + 답글
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+        run: python comments.py ${{ inputs.dry_run && '--dry-run' || '' }}
