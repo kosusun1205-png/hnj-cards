@@ -26,7 +26,7 @@ def night_marker(today):
     return os.path.join("cards", f"{today:%Y%m%d}_posted_night.txt")
 
 
-def write_night(today):
+def write_night(today, angle=""):
     from anthropic import Anthropic
     gz = Solar.fromYmd(today.year, today.month, today.day).getLunar().getDayInGanZhi()
     g, z = GAN[gz[0]], ZHI[gz[1]]
@@ -56,7 +56,7 @@ def write_night(today):
 
 금지: '나'의 경험담, 지어낸 사례나 일화, '여러분', '~해보는 건 어떨까요', '오늘도 화이팅',
 이모지, 해시태그, 질문으로 끝내기, 판매·링크·프로필 언급.
-
+{angle}
 글만 출력하세요."""
     client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
