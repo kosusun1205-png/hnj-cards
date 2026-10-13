@@ -17,6 +17,23 @@ from card import _api, _wait, TH_API, KST, DEFAULT_MODEL, log
 
 WEEK = "월화수목금토일"
 
+# 요일별 밤 글 주제 (매일 글이 비슷해지지 않게)
+THEMES = [
+    ("월", "한 주를 시작하느라 무거웠던 마음 내려놓기. 월요일의 부담을 알아주고 첫날을 버틴 것을 인정해 주기."),
+    ("화", "사람 사이. 동료·친구·가족과 주고받은 말과 마음, 삼킨 말이나 서운함을 다정하게 다독이기."),
+    ("수", "나에게 너그러워지기. 스스로에게 엄격했던 마음, 작은 실수로 자신을 몰아세운 마음을 내려놓기."),
+    ("목", "지친 몸과 마음의 쉼. 한 주의 피로가 쌓인 때, 쉬어도 된다고 허락해 주기."),
+    ("금", "한 주를 버텨낸 나 칭찬하기. 크든 작든 이번 주에 해낸 것들을 알아봐 주기."),
+    ("토", "소소한 여유와 행복. 늦잠, 맛있는 한 끼처럼 작은 즐거움을 마음껏 누려도 된다고 말해 주기."),
+    ("일", "다음 주를 가볍게 맞이하기. 주말 끝의 아쉬움과 걱정을 덜어 주고 내일을 응원하기."),
+]
+
+
+def theme_angle(today):
+    day, theme = THEMES[today.weekday()]
+    return (f"이번 글의 주제({day}요일): {theme}\n"
+            "비유는 오늘 일진의 상징에서 고르되, 주제와 자연스럽게 이어지는 것으로.")
+
 
 def night_path(today):
     return os.path.join("cards", f"{today:%Y%m%d}_night.txt")
@@ -101,7 +118,7 @@ def make_night(today):
     p = night_path(today)
     if os.path.exists(p):
         return open(p, encoding="utf-8").read()
-    text = write_night(today)
+    text = write_night(today, theme_angle(today))
     os.makedirs("cards", exist_ok=True)
     with open(p, "w", encoding="utf-8") as f:
         f.write(text)
