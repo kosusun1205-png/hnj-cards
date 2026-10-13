@@ -238,7 +238,7 @@ def make_weekly(today):
         os.remove(png)
     yy = str(year)[2:]
     story = words["caption"].strip()
-    ask = f"여러분은 몇 년생 무슨 띠인가요? 댓글에 남겨주시면 오늘의 한 줄을 답글로 드려요 🧡"
+    ask = "여러분은 몇 년생 무슨 띠인가요? 두 사람 중 누구와 더 닮았는지 댓글로 알려주세요 🧡"
     tags = f"#{tti}띠 #{yy}년생 #오늘의운세 #사주 #띠별운세 #사주팔자 #운세스타그램 #H앤J사주상담소"
     with open(cap, "w", encoding="utf-8") as f:
         f.write(f"{story}\n\n{ask}\n\n{tags}")

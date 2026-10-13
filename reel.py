@@ -64,8 +64,8 @@ def _scene_cta(today):
         pill = "내 사주 운세는 프로필에서"
         sub = "태어난 해·달·날·시로 보는<br>나만의 매일 운세"
     else:                             # 평일: 판매 문구 없이 댓글 참여만
-        pill = "댓글에 내 띠를 남겨보세요"
-        sub = "오늘의 한 줄 운세를<br>답글로 알려드려요"
+        pill = "댓글로 내 띠 인증하기"
+        sub = "오늘 내 띠의 별점,<br>댓글로 알려주세요"
     return CSS + f"""<style>body{{background:var(--or);color:#fff;}}</style>
 <div class="brand">H&amp;J 사주상담소</div>
 <div style="font-size:112px;font-weight:900;line-height:1.25;letter-spacing:-4px;">내 띠는<br>몇 위였나요?</div>
@@ -181,5 +181,5 @@ def reel_caption(data, top3, worst):
             "내 띠는 몇 위였나요? 12띠 전체 운세는 피드 카드에서 볼 수 있어요.\n"
             + ("같은 띠라도 태어난 달·날·시에 따라 하루는 완전히 달라져요.\n\n"
                if __import__("card").is_soft_day(today) else
-               "댓글에 내 띠나 출생연도(예: 96년생)를 남겨주시면 오늘의 한 줄을 답글로 드려요 🧡\n\n")
+               "여러분은 무슨 띠인가요? 댓글로 내 띠를 인증해 주세요 🧡\n\n")
             + "#오늘의운세 #띠별운세 #운세 #사주 #릴스 #오늘의띠별운세 #운세스타그램 #직장인 #H앤J사주상담소")
