@@ -286,7 +286,11 @@ def generate(today):
     from PIL import Image
     secrets = load_secrets()
     gz, rows = build_rows(today)
-    copy = write_copy(secrets, today, gz, rows)
+    if os.path.exists(data_path(today)):      # 미리 만들어 확인한 문구가 있으면 그대로 사용
+        copy = json.load(open(data_path(today), encoding="utf-8"))["copy"]
+        log("미리 생성된 문구 사용")
+    else:
+        copy = write_copy(secrets, today, gz, rows)
     caption = copy["caption"].strip() + "\n\n" + HASHTAGS
     os.makedirs("cards", exist_ok=True)
     jpg, cap = card_paths(today)
