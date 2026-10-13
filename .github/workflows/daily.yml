@@ -7,16 +7,22 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: '테스트 모드 (인스타에 실제로 올리지 않음)'
+        description: '테스트 모드 (실제로 올리지 않음)'
         type: boolean
         default: true
 
 permissions:
-  contents: write   # 카드 이미지를 이 저장소에 커밋 (인스타가 공개 주소로 가져감)
+  contents: write   # 카드 이미지·게시 기록 커밋, 릴스 영상은 media 브랜치로
+
+concurrency:
+  group: daily-card
+  cancel-in-progress: false
 
 jobs:
   card:
     runs-on: ubuntu-latest
+    env:
+      THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,10 +33,10 @@ jobs:
       - name: 오늘 이미 게시했는지 확인
         id: check
         run: python card.py check
-      - name: 한글 글꼴 설치
+      - name: 한글 글꼴 + ffmpeg 설치
         if: steps.check.outputs.posted != 'true'
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk
-      - name: 카드 생성
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk ffmpeg
+      - name: 카드 + 릴스 생성
         if: steps.check.outputs.posted != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -45,17 +51,28 @@ jobs:
           git commit -m "카드 $(TZ=Asia/Seoul date +%Y-%m-%d)" || echo "변경 없음"
           git push
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      - name: 인스타 게시 + 운영자 알림
+      - name: 릴스 영상 업로드 (media 브랜치, 매일 덮어씀)
+        if: steps.check.outputs.posted != 'true'
+        id: media
+        run: |
+          F="cards/$(TZ=Asia/Seoul date +%Y%m%d).mp4"
+          if [ -f "$F" ]; then
+            mkdir -p /tmp/media && cp "$F" /tmp/media/ && cd /tmp/media
+            git init -q -b media && git add .
+            git -c user.name="HnJ Saju Bot" -c user.email="actions@users.noreply.github.com" commit -qm "media"
+            git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" media
+            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+      - name: 피드 · 릴스 · 스레드 게시 + 운영자 알림
         if: steps.check.outputs.posted != 'true'
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
-        run: python card.py publish ${{ steps.push.outputs.sha }} ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: python card.py publish ${{ steps.push.outputs.sha }} ${{ steps.media.outputs.sha }} ${{ inputs.dry_run && '--dry-run' || '' }}
       - name: 게시 기록 커밋 (같은 날 중복 게시 방지)
-        if: steps.check.outputs.posted != 'true' && !inputs.dry_run
+        if: always() && steps.check.outputs.posted != 'true' && !inputs.dry_run
         run: |
           git add cards
-          git commit -m "게시 완료 $(TZ=Asia/Seoul date +%Y-%m-%d)" || echo "변경 없음"
+          git commit -m "게시 기록 $(TZ=Asia/Seoul date +%Y-%m-%d)" || echo "변경 없음"
           git pull --rebase -q && git push
