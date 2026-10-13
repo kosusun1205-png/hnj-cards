@@ -100,6 +100,20 @@ SCHEMA = {
 }
 
 
+def is_soft_day(today):
+    """프로필을 부드럽게 언급하는 날(일요일). 나머지 날은 판매 문구 없이 참여 유도만."""
+    return today.weekday() == 6
+
+
+def footer_lines(today):
+    """카드·스레드 하단 두 줄 (위: 공감 문장, 아래: 행동 문장)."""
+    if is_soft_day(today):
+        return ("같은 띠라도 태어난 달·날·시가 다르면 운세도 달라요",
+                "내 사주로 보는 매일 운세는 <b>프로필</b>에서")
+    return ("같은 띠라도 태어난 달·날·시가 다르면 운세도 달라요",
+            "댓글에 내 띠를 남기면 <b>오늘의 한 줄</b>을 답해드려요")
+
+
 def write_copy(secrets, today, gz, rows):
     from anthropic import Anthropic
 
@@ -107,6 +121,9 @@ def write_copy(secrets, today, gz, rows):
         f"{i+1}. {r['tti']}띠({r['zhi']}) : 오늘 일지와 {r['rel']} → {r['meaning']}"
         for i, r in enumerate(rows))
     gan = GAN[gz[0]]
+    ending = ("마지막 줄은 '같은 띠라도 태어난 달·날·시에 따라 하루가 달라져요' 정도로 가볍게."
+              if is_soft_day(today) else
+              "마지막 줄은 '댓글에 내 띠(예: 쥐띠)나 출생연도를 남겨주시면 오늘의 한 줄을 답글로 드려요' 취지의 참여 질문으로.")
     prompt = f"""당신은 H&J사주상담소의 인스타그램 운세 카드 작가입니다.
 오늘({today.month}월 {today.day}일 {"월화수목금토일"[today.weekday()]}요일)의 일진은 {_ko_pillar(gz)}, 천간 오행은 {gan[1]}입니다.
 아래는 프로그램이 계산한 12띠와 오늘 일지의 관계입니다. 이 근거를 벗어나 지어내지 마세요.
@@ -118,8 +135,8 @@ def write_copy(secrets, today, gz, rows):
 - lines: 위 순서(쥐띠→돼지띠) 그대로 12개. 각 띠에게 오늘 한 줄 조언.
   ★각 18자 이내★, 친근한 존댓말 또는 명사형 마무리, 직장인 공감 표현 환영.
   명리 용어(충, 합, 원진 등)는 쓰지 말고 쉬운 말로. 이모지·특수기호 금지.
-- caption: 인스타 본문 2~3줄. 오늘 분위기 요약 + "같은 띠라도 태어난 달·날·시에 따라
-  운세는 완전히 달라요. 내 사주로 보는 매일 운세는 프로필 링크에서!" 취지로 마무리.
+- caption: 인스타 본문 2~3줄. 오늘 분위기를 친구에게 말하듯 요약하고, {ending}
+  광고·판매 느낌 금지(가격, 구매, 신청, 링크 클릭 유도 표현 쓰지 말 것).
   해시태그는 넣지 마세요(시스템이 붙임)."""
 
     client = Anthropic(api_key=secrets["ANTHROPIC_API_KEY"])
@@ -198,8 +215,8 @@ def render_html(today, gz, rows, copy):
   <div class="grid">{''.join(items)}
   </div>
   <div class="foot">
-    <div class="q">같은 띠라도 태어난 달·날·시가 다르면 운세도 달라요</div>
-    <div class="a">내 사주로 보는 매일 운세는 <b>프로필 링크</b>에서</div>
+    <div class="q">{footer_lines(today)[0]}</div>
+    <div class="a">{footer_lines(today)[1]}</div>
   </div>
 </body></html>"""
 
@@ -251,8 +268,17 @@ def posted_marker(today, ch="feed"):
     return os.path.join("cards", f"{today:%Y%m%d}_posted{suffix}.txt")
 
 
-def enabled_channels():
-    return [c for c in CHANNELS if c != "threads" or os.environ.get("THREADS_TOKEN")]
+def is_weekly_day(today):
+    """주간 '같은 띠, 다른 운세' 비교 게시물을 올리는 날(일요일). FORCE_WEEKLY로 테스트 가능."""
+    return today.weekday() == 6 or bool(os.environ.get("FORCE_WEEKLY"))
+
+
+def enabled_channels(today):
+    th = bool(os.environ.get("THREADS_TOKEN"))
+    chs = [c for c in CHANNELS if c != "threads" or th]
+    if is_weekly_day(today):
+        chs += ["weekly"] + (["weekly_threads"] if th else [])
+    return chs
 
 
 def generate(today):
@@ -279,6 +305,12 @@ def generate(today):
         reel.make_reel(data, reel_path(today))
     except Exception as e:                    # 릴스 실패해도 카드 게시는 진행
         log(f"릴스 생성 실패: {e}")
+    if is_weekly_day(today):
+        try:
+            import compare
+            compare.make_weekly(today)
+        except Exception as e:
+            log(f"주간 비교 슬라이드 생성 실패: {e}")
     return jpg, caption
 
 
@@ -330,6 +362,38 @@ def ig_publish(token, caption, dry_run=False, **media):
     return _api(IG_API, "GET", mid, fields="permalink", access_token=token).get("permalink")
 
 
+def ig_carousel(token, caption, image_urls, dry_run=False):
+    """인스타 여러 장 게시물. 게시물 주소 반환."""
+    me = _api(IG_API, "GET", "me", fields="user_id,username", access_token=token)
+    uid = me["user_id"]
+    kids = [_api(IG_API, "POST", f"{uid}/media", image_url=u, is_carousel_item="true",
+                 access_token=token)["id"] for u in image_urls]
+    for k in kids:
+        _wait(IG_API, k, token, "status_code", ("FINISHED",), 30)
+    cid = _api(IG_API, "POST", f"{uid}/media", media_type="CAROUSEL", children=",".join(kids),
+               caption=caption, access_token=token)["id"]
+    _wait(IG_API, cid, token, "status_code", ("FINISHED",), 30)
+    if dry_run:
+        return "(테스트: 게시 안 함)"
+    mid = _api(IG_API, "POST", f"{uid}/media_publish", creation_id=cid, access_token=token)["id"]
+    return _api(IG_API, "GET", mid, fields="permalink", access_token=token).get("permalink")
+
+
+def th_carousel(token, text, image_urls, dry_run=False):
+    """스레드 여러 장 게시물. 게시물 주소 반환."""
+    kids = [_api(TH_API, "POST", "me/threads", media_type="IMAGE", image_url=u,
+                 is_carousel_item="true", access_token=token)["id"] for u in image_urls]
+    for k in kids:
+        _wait(TH_API, k, token, "status", ("FINISHED",), 30)
+    cid = _api(TH_API, "POST", "me/threads", media_type="CAROUSEL", children=",".join(kids),
+               text=text, access_token=token)["id"]
+    _wait(TH_API, cid, token, "status", ("FINISHED",), 30)
+    if dry_run:
+        return "(테스트: 게시 안 함)"
+    mid = _api(TH_API, "POST", "me/threads_publish", creation_id=cid, access_token=token)["id"]
+    return _api(TH_API, "GET", mid, fields="permalink", access_token=token).get("permalink")
+
+
 def th_publish(token, text, image_url, dry_run=False):
     """스레드 게시 (이미지 + 글). 게시물 주소 반환."""
     cid = _api(TH_API, "POST", "me/threads", media_type="IMAGE", image_url=image_url,
@@ -360,8 +424,10 @@ def threads_text(data):
     from datetime import date
     today = date.fromisoformat(data["date"])
     head = f"{today.month}월 {today.day}일 ({'월화수목금토일'[today.weekday()]}) 오늘의 띠별 운세\n\n"
-    tail = ("\n\n같은 띠라도 태어난 달·날·시가 다르면 운세도 달라요.\n"
-            "내 사주로 보는 매일 운세는 프로필 링크에서")
+    q, a = footer_lines(today)
+    if not is_soft_day(today):        # 스레드엔 자동 답글이 없으니 약속 대신 질문만
+        a = "여러분의 띠는 오늘 별 몇 개였나요?"
+    tail = f"\n\n{q}.\n" + a.replace("<b>", "").replace("</b>", "")
     for fmt in (lambda r, l: f"{r['tti']}띠 {'★' * r['star']}{'☆' * (5 - r['star'])} {l}",
                 lambda r, l: f"{r['tti']}띠 {l}"):
         body = "\n".join(fmt(r, l) for r, l in zip(data["rows"], data["copy"]["lines"]))
@@ -401,8 +467,9 @@ def publish(today, sha, media_sha="", dry_run=False):
     title = f"{today.month}월 {today.day}일 띠별 운세"
 
     results, failed = [], False
-    for ch in enabled_channels():
-        name = {"feed": "인스타 피드", "reel": "인스타 릴스", "threads": "스레드"}[ch]
+    for ch in enabled_channels(today):
+        name = {"feed": "인스타 피드", "reel": "인스타 릴스", "threads": "스레드",
+                "weekly": "주간 비교(인스타)", "weekly_threads": "주간 비교(스레드)"}[ch]
         if os.path.exists(posted_marker(today, ch)):
             results.append(f"· {name}: 이미 게시됨 (건너뜀)")
             continue
@@ -418,6 +485,17 @@ def publish(today, sha, media_sha="", dry_run=False):
                 link = ig_publish(secrets["IG_TOKEN"], reel.reel_caption(data, top3, worst), dry_run,
                                   media_type="REELS", share_to_feed="true",
                                   video_url=f"{raw}/{media_sha}/{os.path.basename(mp4)}")
+            elif ch in ("weekly", "weekly_threads"):
+                import compare
+                jpgs, wcap, wth = compare.weekly_paths(today)
+                if not all(os.path.exists(p) for p in jpgs):
+                    raise RuntimeError("주간 비교 슬라이드가 만들어지지 않았어요")
+                urls = [f"{raw}/{sha}/{p.replace(os.sep, '/')}" for p in jpgs]
+                if ch == "weekly":
+                    link = ig_carousel(secrets["IG_TOKEN"], open(wcap, encoding="utf-8").read(),
+                                       urls, dry_run)
+                else:
+                    link = th_carousel(th_token, open(wth, encoding="utf-8").read(), urls, dry_run)
             else:
                 link = th_publish(th_token, threads_text(data), image_url, dry_run)
             if not dry_run:
@@ -458,7 +536,7 @@ if __name__ == "__main__":
         today = datetime.strptime(args[args.index("--date") + 1], "%Y-%m-%d").date()
     cmd = args[0] if args else "preview"
     if cmd == "check":                         # 워크플로: 오늘 모든 채널 게시를 끝냈는지
-        done = all(os.path.exists(posted_marker(today, c)) for c in enabled_channels())
+        done = all(os.path.exists(posted_marker(today, c)) for c in enabled_channels(today))
         log(f"오늘({today}) 게시 기록: {'모두 완료 → 건너뜀' if done else '남은 채널 있음'}")
         out = os.environ.get("GITHUB_OUTPUT")
         if out:

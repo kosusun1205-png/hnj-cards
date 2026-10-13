@@ -10,6 +10,10 @@ on:
         description: '테스트 모드 (실제로 올리지 않음)'
         type: boolean
         default: true
+      weekly:
+        description: '주간 비교 게시물도 함께 (일요일이 아니어도 테스트)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write   # 카드 이미지·게시 기록 커밋, 릴스 영상은 media 브랜치로
@@ -23,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
+      FORCE_WEEKLY: ${{ inputs.weekly && '1' || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

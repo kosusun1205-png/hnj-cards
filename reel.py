@@ -1,6 +1,6 @@
 """오늘의 띠별 운세 → 인스타 릴스용 세로 영상(1080x1920, 약 13초) 생성.
 
-장면: 오프닝 → TOP3(3위·2위·1위) → 오늘 조심할 띠 → 프로필 링크 안내
+장면: 오프닝 → TOP3(3위·2위·1위) → 오늘 조심할 띠 → 댓글 참여(일요일만 프로필 안내)
 배경음은 저작권 걱정 없도록 코드로 합성한 잔잔한 화음.
 """
 import math
@@ -58,13 +58,20 @@ def _scene_rank(today, rank, row, line, color, bg):
 </body></html>"""
 
 
-def _scene_cta():
-    return CSS + """<style>body{background:var(--or);color:#fff;}</style>
+def _scene_cta(today):
+    from card import is_soft_day
+    if is_soft_day(today):            # 일요일: 프로필을 부드럽게
+        pill = "내 사주 운세는 프로필에서"
+        sub = "태어난 해·달·날·시로 보는<br>나만의 매일 운세"
+    else:                             # 평일: 판매 문구 없이 댓글 참여만
+        pill = "댓글에 내 띠를 남겨보세요"
+        sub = "오늘의 한 줄 운세를<br>답글로 알려드려요"
+    return CSS + f"""<style>body{{background:var(--or);color:#fff;}}</style>
 <div class="brand">H&amp;J 사주상담소</div>
-<div style="font-size:112px;font-weight:900;line-height:1.25;letter-spacing:-4px;">같은 띠라도<br>사주는<br>다 달라요</div>
-<div style="font-size:52px;font-weight:500;line-height:1.6;margin-top:90px;color:#FFE3D3;">태어난 해·달·날·시로 보는<br>나만의 매일 운세</div>
-<div style="font-size:62px;font-weight:900;margin-top:90px;background:#fff;color:var(--or);
-     padding:26px 60px;border-radius:999px;">프로필 링크에서 확인</div>
+<div style="font-size:112px;font-weight:900;line-height:1.25;letter-spacing:-4px;">내 띠는<br>몇 위였나요?</div>
+<div style="font-size:52px;font-weight:500;line-height:1.6;margin-top:90px;color:#FFE3D3;">{sub}</div>
+<div style="font-size:58px;font-weight:900;margin-top:90px;background:#fff;color:var(--or);
+     padding:26px 56px;border-radius:999px;">{pill}</div>
 </body></html>"""
 
 
@@ -84,7 +91,7 @@ def plan(data):
         scenes.append((_scene_rank(today, rank, rows[i], lines[i], "#F0641E", "#FBF6EF"), 2.4))
     scenes.append((_scene_rank(today, "오늘 조심할 띠", rows[worst], lines[worst],
                                "#3D5A80", "#EEF1F5"), 2.4))
-    scenes.append((_scene_cta(), 3.0))
+    scenes.append((_scene_cta(today), 3.0))
     return scenes, [rows[i]["tti"] for i in top3], rows[worst]["tti"]
 
 
@@ -171,7 +178,8 @@ def reel_caption(data, top3, worst):
     return (f"{today.month}월 {today.day}일 오늘 운 좋은 띠 TOP 3\n"
             f"1위 {top3[0]}띠 · 2위 {top3[1]}띠 · 3위 {top3[2]}띠\n"
             f"오늘은 {worst}띠가 조금 조심하면 좋은 날이에요.\n\n"
-            "내 띠는 몇 위였나요? 12띠 전체 운세는 피드 카드에서 확인하세요.\n"
-            "같은 띠라도 태어난 달·날·시에 따라 운세는 완전히 달라요. "
-            "내 사주로 보는 매일 운세는 프로필 링크에서!\n\n"
-            "#오늘의운세 #띠별운세 #운세 #사주 #릴스 #오늘의띠별운세 #운세스타그램 #직장인 #H앤J사주상담소")
+            "내 띠는 몇 위였나요? 12띠 전체 운세는 피드 카드에서 볼 수 있어요.\n"
+            + ("같은 띠라도 태어난 달·날·시에 따라 하루는 완전히 달라져요.\n\n"
+               if __import__("card").is_soft_day(today) else
+               "댓글에 내 띠나 출생연도(예: 96년생)를 남겨주시면 오늘의 한 줄을 답글로 드려요 🧡\n\n")
+            + "#오늘의운세 #띠별운세 #운세 #사주 #릴스 #오늘의띠별운세 #운세스타그램 #직장인 #H앤J사주상담소")
