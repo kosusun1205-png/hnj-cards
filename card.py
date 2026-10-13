@@ -237,6 +237,11 @@ def card_paths(today):
     return base + ".jpg", base + "_caption.txt"
 
 
+def posted_marker(today):
+    """그날 실제 게시 완료 기록 (중복 게시 방지)."""
+    return os.path.join("cards", f"{today:%Y%m%d}_posted.txt")
+
+
 def generate(today):
     """카드 jpg + 캡션 파일 생성."""
     from PIL import Image
@@ -351,6 +356,8 @@ def publish(today, sha, dry_run=False):
             subject = f"[H&J 인스타] 자동 게시 테스트 성공 ({title})"
             body = "테스트 모드라 실제 게시는 하지 않았어요. 이미지 주소와 토큰 모두 정상입니다."
         else:
+            with open(posted_marker(today), "w", encoding="utf-8") as f:
+                f.write(f"{datetime.now(KST).isoformat()} {link}\n")
             subject = f"[H&J 인스타] {title} 자동 게시 완료"
             body = (f"오늘 카드가 인스타에 올라갔어요.\n{link}\n\n"
                     "당근 소식에 올릴 날이면 첨부 이미지와 아래 캡션을 쓰세요.")
@@ -374,7 +381,14 @@ if __name__ == "__main__":
     if "--date" in args:
         today = datetime.strptime(args[args.index("--date") + 1], "%Y-%m-%d").date()
     cmd = args[0] if args else "preview"
-    if cmd in ("generate", "preview"):
+    if cmd == "check":                         # 워크플로: 오늘 이미 게시했는지
+        posted = os.path.exists(posted_marker(today))
+        log(f"오늘({today}) 게시 기록: {'있음 → 건너뜀' if posted else '없음'}")
+        out = os.environ.get("GITHUB_OUTPUT")
+        if out:
+            with open(out, "a") as f:
+                f.write(f"posted={'true' if posted else 'false'}\n")
+    elif cmd in ("generate", "preview"):
         jpg, caption = generate(today)
         if cmd == "preview":
             print(caption)

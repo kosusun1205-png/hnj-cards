@@ -22,15 +22,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: 한글 글꼴 설치
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk
       - name: 의존성 설치
         run: pip install -r requirements.txt
+      - name: 오늘 이미 게시했는지 확인
+        id: check
+        run: python card.py check
+      - name: 한글 글꼴 설치
+        if: steps.check.outputs.posted != 'true'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk
       - name: 카드 생성
+        if: steps.check.outputs.posted != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python card.py generate
       - name: 카드 이미지 커밋
+        if: steps.check.outputs.posted != 'true'
         id: push
         run: |
           git config user.name "HnJ Saju Bot"
@@ -40,9 +46,16 @@ jobs:
           git push
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: 인스타 게시 + 운영자 알림
+        if: steps.check.outputs.posted != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
         run: python card.py publish ${{ steps.push.outputs.sha }} ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: 게시 기록 커밋 (같은 날 중복 게시 방지)
+        if: steps.check.outputs.posted != 'true' && !inputs.dry_run
+        run: |
+          git add cards
+          git commit -m "게시 완료 $(TZ=Asia/Seoul date +%Y-%m-%d)" || echo "변경 없음"
+          git pull --rebase -q && git push
