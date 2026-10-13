@@ -315,6 +315,12 @@ def generate(today):
             compare.make_weekly(today)
         except Exception as e:
             log(f"주간 비교 슬라이드 생성 실패: {e}")
+    if os.environ.get("THREADS_TOKEN"):        # 오늘 밤 스레드 글도 미리 만들어 메일로 미리보기
+        try:
+            import night
+            night.make_night(today)
+        except Exception as e:
+            log(f"밤 글 생성 실패: {e}")
     return jpg, caption
 
 
@@ -532,6 +538,10 @@ def publish(today, sha, media_sha="", dry_run=False):
         f"{r['tti']}띠 오늘은 {'★' * r['star']}{'☆' * (5 - r['star'])}! \"{l}\" 좋은 하루 보내세요 🧡"
         for r, l in zip(data["rows"], data["copy"]["lines"]))
     body += "\n\n──────── 댓글 답글용 (해당 띠 줄 복사) ────────\n" + cheat
+    np = os.path.join("cards", f"{today:%Y%m%d}_night.txt")
+    if os.path.exists(np):
+        body += ("\n\n──────── 오늘 밤 9시쯤 스레드에 올라갈 글 ────────\n"
+                 + open(np, encoding="utf-8").read())
     notify_owner(secrets, today, subject, body + "\n\n──────── 캡션 ────────\n" + caption, jpg)
     if failed:
         sys.exit(1)
