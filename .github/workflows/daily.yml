@@ -2,8 +2,8 @@ name: 띠별 운세 카드 자동 게시
 
 on:
   schedule:
-    # 한국 오전 6:30 → UTC 21:30
-    - cron: '30 21 * * *'
+    # 정각은 GitHub 예약이 몰려 수 시간 지연됨 → 새벽 4시대 비정각
+    - cron: '23 19 * * *'   # 한국 04:23 (GitHub 지연 감안)
   workflow_dispatch:
     inputs:
       dry_run:
