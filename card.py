@@ -524,6 +524,10 @@ def publish(today, sha, media_sha="", dry_run=False):
     if failed:
         body += "\n\n실패한 채널은 첨부 이미지와 아래 캡션으로 직접 올려 주세요."
     body += "\n\n당근 소식에 올릴 날이면 첨부 이미지와 아래 캡션을 쓰세요."
+    cheat = "\n".join(                         # 댓글에 직접 답할 때 복사해서 쓰는 12띠 한 줄
+        f"{r['tti']}띠 오늘은 {'★' * r['star']}{'☆' * (5 - r['star'])}! \"{l}\" 좋은 하루 보내세요 🧡"
+        for r, l in zip(data["rows"], data["copy"]["lines"]))
+    body += "\n\n──────── 댓글 답글용 (해당 띠 줄 복사) ────────\n" + cheat
     notify_owner(secrets, today, subject, body + "\n\n──────── 캡션 ────────\n" + caption, jpg)
     if failed:
         sys.exit(1)

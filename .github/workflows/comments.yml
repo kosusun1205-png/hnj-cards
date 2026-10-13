@@ -1,8 +1,9 @@
 name: 인스타 댓글 자동 답글
 
 on:
-  schedule:
-    - cron: '17,47 * * * *'   # 30분마다 (정각 피함)
+  # 개발 모드 앱은 남의 댓글을 읽을 수 없어 예약 실행을 꺼 둠 (Meta 앱 심사 통과 후 다시 켜기)
+  # schedule:
+  #   - cron: '17,47 * * * *'   # 30분마다 (정각 피함)
   workflow_dispatch:
     inputs:
       dry_run:
