@@ -32,32 +32,64 @@ def write_night(today):
     g, z = GAN[gz[0]], ZHI[gz[1]]
     prompt = f"""오늘({today.month}월 {today.day}일 {WEEK[today.weekday()]}요일)은 {_ko_pillar(gz)}일입니다.
 천간 {gz[0]}({g[0]}, {g[1]}·{g[2]}), 지지 {gz[1]}({z[0]}, {z[1]}, {z[2]}띠).
-명리학에서 이 글자가 상징하는 자연 이미지를 하나 골라, 하루를 마친 사람에게 건네는
+사주(명리학)에서 오늘 글자가 상징하는 이미지를 바탕으로, 하루를 마친 사람에게 건네는
 스레드(Threads) 밤 글을 써 주세요.
 
-누구나 한 번 읽고 바로 이해되게:
-- 초등학생도 아는 쉬운 단어만. 한자어·어려운 말·명리 용어 금지(오행, 일간, 십신 같은 말 X).
-- 한 문장은 20자 안팎으로 짧게. 전체 5~7줄.
-- 비유는 딱 하나만. 첫 줄에 '오늘은 ○○의 날이래요'처럼 아주 쉽게 소개하고 그 비유 하나로 끝까지.
-- 다정한 존댓말. 읽는 사람의 하루를 말해 줄 것 (출근길, 회의, 퇴근길처럼 누구나 아는 장면 하나).
+가장 중요한 것: 처음 보는 사람이 한 번 읽고 '아, 이런 말이구나' 하고 바로 이해해야 합니다.
+수수께끼 같거나, 문장이 뚝뚝 끊기거나, 무슨 뜻인지 생각해야 하는 글은 실패입니다.
 
-금지:
-- '나'의 경험담, 지어낸 상담 사례나 일화
-- '~해보는 건 어떨까요', '여러분', '오늘도 화이팅', 과한 위로, 같은 문장 구조 반복
-- 이모지, 해시태그, 질문으로 끝내기, 판매·링크·프로필 언급
-- 마지막에 교훈 요약. 마지막 줄은 짧은 여운으로.
+글의 흐름 (이 순서대로, 문장끼리 '그래서/그러니까/그런데'로 자연스럽게 이어지게):
+1. 주제: 사주에서 오늘이 어떤 날인지 + 그게 무슨 뜻인지 한두 문장으로 분명하게.
+   (예: '사주로 보면 오늘은 큰 바위 같은 날이래요. 쉽게 흔들리지 않는 단단한 기운이 강한 날이라는 뜻이에요.')
+2. 공감: 그 기운이 오늘 하루에 어떻게 느껴졌을지, 누구나 겪는 평범한 장면 하나로.
+3. 의미: 그래서 오늘의 나에게 어떤 의미인지, 위로나 응원 한두 문장.
+4. 마무리: 첫 문장의 이미지로 돌아와 따뜻하게 맺기.
+
+쓰는 법:
+- 초등학생도 아는 쉬운 단어. 한자와 명리 용어(오행, 일간, 십신, 경금, 경신일 등) 쓰지 말 것.
+- 비유는 처음부터 끝까지 딱 하나. 다른 비유를 덧붙이지 말 것.
+- 비유는 누구나 바로 떠올리는 좋은 이미지로 (바위, 보석, 나무, 햇살, 강물처럼).
+  칼·불·폭풍처럼 무섭거나 오해할 수 있는 이미지는 피할 것.
+- 다정한 존댓말. 공백 포함 250~320자. 3~4문단, 문단 사이 빈 줄 하나.
+
+금지: '나'의 경험담, 지어낸 사례나 일화, '여러분', '~해보는 건 어떨까요', '오늘도 화이팅',
+이모지, 해시태그, 질문으로 끝내기, 판매·링크·프로필 언급.
 
 글만 출력하세요."""
     client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    resp = client.messages.create(
-        model=DEFAULT_MODEL, max_tokens=1024, thinking={"type": "between_tools"},
-        messages=[{"role": "user", "content": prompt}],
-        extra_headers={"anthropic-beta": "server-side-fallback-2026-07-01"},
-        extra_body={"fallbacks": "default"},
-    )
-    if resp.stop_reason == "refusal":
-        raise RuntimeError(f"AI가 생성을 거절함: {resp.stop_details}")
-    return "".join(b.text for b in resp.content if b.type == "text").strip()[:500]
+
+    def ask(content):
+        resp = client.messages.create(
+            model=DEFAULT_MODEL, max_tokens=4096, output_config={"effort": "medium"},
+            messages=[{"role": "user", "content": content}],
+            extra_headers={"anthropic-beta": "server-side-fallback-2026-07-01"},
+            extra_body={"fallbacks": "default"},
+        )
+        if resp.stop_reason == "refusal":
+            raise RuntimeError(f"AI가 생성을 거절함: {resp.stop_details}")
+        return "".join(b.text for b in resp.content if b.type == "text").strip()
+
+    draft = ask(prompt)
+    # 편집자 단계: 사주를 모르는 사람 눈으로 다시 읽고, 이해 안 되거나 끊기는 곳을 고친다
+    final = ask(f"""아래는 스레드에 올릴 밤 글 초안입니다. 사주를 전혀 모르는 30대 직장인이 처음 읽는다고 생각하고 검토하세요.
+- 무슨 말인지 바로 이해되나요? 비유가 왜 나왔는지 설명돼 있나요?
+- 문장끼리 자연스럽게 이어지나요? 갑자기 다른 이야기로 튀는 곳은 없나요?
+- 비유가 처음부터 끝까지 딱 하나인가요? (금속·바위·원석처럼 섞이면 하나로 통일)
+- 한자(庚, 辛 등)나 '경신일' 같은 명리 용어가 있으면 빼고 쉬운 말로만.
+- 마지막 줄이 앞 내용과 연결되나요?
+문제가 있으면 고쳐서, 없으면 그대로 최종 글만 출력하세요. 설명이나 머리말 없이 글만.
+원래 규칙(쉬운 말, 다정한 존댓말, 공백 포함 250~320자, 이모지·해시태그·질문·판매 문구 금지)은 지키세요.
+길면 반복되는 문장과 군더더기를 빼서 줄이세요.
+
+[초안]
+{draft}""")
+    if len(final) > 400:                       # 그래도 길면 한 번 더 줄이기
+        final = ask("아래 글을 뜻과 흐름은 그대로 두고 공백 포함 300자 안팎으로 줄여 주세요. "
+                    "글만 출력하세요.\n\n" + final)
+    if len(final) > 500:                       # 스레드 한도: 문장 끝에서 자르기
+        cut = final[:500]
+        final = cut[:max(cut.rfind("요."), cut.rfind("다."), cut.rfind("."))+2].strip()
+    return final
 
 
 def make_night(today):
