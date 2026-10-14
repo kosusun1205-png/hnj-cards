@@ -130,6 +130,10 @@ def publish_night(today, dry_run=False):
     if os.path.exists(night_marker(today)):
         log("오늘 밤 글은 이미 게시됨")
         return
+    hour = datetime.now(KST).hour
+    if not dry_run and not (18 <= hour <= 23):     # 예약이 밀려 새벽·낮에 돌면 올리지 않음
+        log(f"지금은 {hour}시라 밤 글을 올리지 않음 (18~23시에만 게시)")
+        return
     token = os.environ["THREADS_TOKEN"]
     text = make_night(today)
     cid = _api(TH_API, "POST", "me/threads", media_type="TEXT", text=text, access_token=token)["id"]
