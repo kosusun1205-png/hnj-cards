@@ -2,7 +2,7 @@ name: 스레드 밤 글 자동 게시
 
 on:
   schedule:
-    - cron: '41 11 * * *'   # 한국 20:41 (정각 피함, 지연돼도 밤 시간대)
+    - cron: '41 7 * * *'    # 한국 16:41 시작 → 20:30까지 기다렸다 게시 (예약 지연 대비)
   workflow_dispatch:
     inputs:
       dry_run:
@@ -27,6 +27,9 @@ jobs:
           python-version: '3.12'
       - name: 의존성 설치
         run: pip install -r requirements.txt
+      - name: 게시 시각(20:30)까지 대기
+        if: github.event_name == 'schedule'
+        run: python wait_until.py 20 30
       - name: 밤 글 게시
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

@@ -2,8 +2,8 @@ name: 띠별 운세 카드 자동 게시
 
 on:
   schedule:
-    # 정각은 GitHub 예약이 몰려 수 시간 지연됨 → 새벽 4시대 비정각
-    - cron: '23 19 * * *'   # 한국 04:23 (GitHub 지연 감안)
+    # GitHub 예약은 수 시간씩 밀림 → 새벽 2시대에 시작해 카드를 만들어 두고 06:30까지 기다렸다 게시
+    - cron: '23 17 * * *'   # 한국 02:23
   workflow_dispatch:
     inputs:
       dry_run:
@@ -68,6 +68,9 @@ jobs:
             git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" media
             echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
+      - name: 게시 시각(06:30)까지 대기
+        if: steps.check.outputs.posted != 'true' && github.event_name == 'schedule'
+        run: python wait_until.py 6 30
       - name: 피드 · 릴스 · 스레드 게시 + 운영자 알림
         if: steps.check.outputs.posted != 'true'
         env:
