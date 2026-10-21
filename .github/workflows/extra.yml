@@ -1,0 +1,49 @@
+name: 녹음 영상 릴스 게시 (07:00)
+
+on:
+  schedule:
+    # GitHub 예약은 수 시간씩 밀림 → 새벽 4시대에 시작해 07:00까지 기다렸다 게시
+    - cron: '41 19 * * *'   # 한국 04:41
+  workflow_dispatch:
+    inputs:
+      day:
+        description: '게시할 날짜 YYYYMMDD (비우면 오늘)'
+        type: string
+        default: ''
+      dry_run:
+        description: '테스트 모드 (실제로 올리지 않음)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write   # 게시 기록 커밋
+
+concurrency:
+  group: extra-reel
+  cancel-in-progress: false
+
+jobs:
+  reel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 의존성 설치
+        run: pip install -r requirements.txt
+      - name: 게시 시각(07:00)까지 대기
+        if: github.event_name == 'schedule'
+        run: python wait_until.py 7 0
+      - name: 릴스 게시
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+        run: python extra_reel.py "${{ inputs.day }}" ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: 게시 기록 커밋 (중복 게시 방지)
+        if: always() && !inputs.dry_run
+        run: |
+          git config user.name "HnJ Saju Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add extra
+          git commit -m "녹음 릴스 기록 $(date -u -d '+9 hours' +%Y-%m-%d)" || echo "변경 없음"
+          git pull --rebase -q && git push
