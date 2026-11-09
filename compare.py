@@ -11,7 +11,7 @@ import random
 from lunar_python import Solar
 from saju import compute_saju, iljin_relation, format_saju_text, format_iljin_text, ZHI
 
-from card import render_png, _esc, log, DEFAULT_MODEL
+from card import render_png, _esc, log, DEFAULT_MODEL, TODAY_LINK
 
 ORDER = "子丑寅卯辰巳午未申酉戌亥"
 GOOD = {"정인", "편인", "정재", "식신", "정관"}
@@ -178,7 +178,7 @@ def _person(p, w, color, year, tti, n):
     <div class="qq"><div class="k" style="color:{color}">오늘의 점심</div><div class="v">{_esc(w['lunch'])}</div></div>
   </div>
 </div>
-<div class="note">※ 가상 인물 · H&amp;J 사주딜리버리로 실제 생성한 운세</div>
+<div class="note">※ 가상 인물 · 실제 사주로 계산한 운세</div>
 <div class="mark">H&amp;J</div><div class="pg">{n}/6</div>""" + END
 
 
@@ -241,7 +241,7 @@ def make_weekly(today):
     ask = "여러분은 몇 년생 무슨 띠인가요? 두 사람 중 누구와 더 닮았는지 댓글로 알려주세요 🧡"
     tags = f"#{tti}띠 #{yy}년생 #오늘의운세 #사주 #띠별운세 #사주팔자 #운세스타그램 #H앤J사주상담소"
     with open(cap, "w", encoding="utf-8") as f:
-        f.write(f"{story}\n\n{ask}\n\n{tags}")
+        f.write(f"{story}\n\n{ask}\n\n{TODAY_LINK}\n\n{tags}")
     with open(th, "w", encoding="utf-8") as f:              # 스레드: 자동 답글이 없으니 질문만
         f.write((f"{story}\n\n여러분은 몇 년생 무슨 띠인가요?")[:500])
     log(f"주간 비교 슬라이드 생성: {year}년생 {tti}띠 {people[0]['name']} vs {people[1]['name']}")

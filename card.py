@@ -49,8 +49,9 @@ YUKHAP = [{"子", "丑"}, {"寅", "亥"}, {"卯", "戌"}, {"辰", "酉"}, {"巳"
 SAMHAP = ["申子辰", "亥卯未", "寅午戌", "巳酉丑"]
 WONJIN = [{"子", "未"}, {"丑", "午"}, {"寅", "酉"}, {"卯", "申"}, {"辰", "亥"}, {"巳", "戌"}]
 
-HASHTAGS = ("#오늘의운세 #띠별운세 #사주 #일진 #운세 #사주딜리버리 "
+HASHTAGS = ("#오늘의운세 #띠별운세 #사주 #일진 #운세 #오늘사주 "
             "#H앤J사주상담소 #직장인 #출근길 #운세스타그램")
+TODAY_LINK = "내 생일로 보는 오늘의 사주는 여기서 무료로 볼 수 있어요.\n👉 오늘사주 https://oneul-saju.pages.dev"
 
 
 def relation(tti, day):
@@ -291,7 +292,7 @@ def generate(today):
         log("미리 생성된 문구 사용")
     else:
         copy = write_copy(secrets, today, gz, rows)
-    caption = copy["caption"].strip() + "\n\n" + HASHTAGS
+    caption = copy["caption"].strip() + "\n\n" + TODAY_LINK + "\n\n" + HASHTAGS
     os.makedirs("cards", exist_ok=True)
     jpg, cap = card_paths(today)
     png = jpg.replace(".jpg", ".png")

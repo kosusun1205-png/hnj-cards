@@ -182,4 +182,5 @@ def reel_caption(data, top3, worst):
             + ("같은 띠라도 태어난 달·날·시에 따라 하루는 완전히 달라져요.\n\n"
                if __import__("card").is_soft_day(today) else
                "여러분은 무슨 띠인가요? 댓글로 내 띠를 인증해 주세요 🧡\n\n")
+            + __import__("card").TODAY_LINK + "\n\n"
             + "#오늘의운세 #띠별운세 #운세 #사주 #릴스 #오늘의띠별운세 #운세스타그램 #직장인 #H앤J사주상담소")
