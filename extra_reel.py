@@ -29,7 +29,8 @@ def main():
     urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=30)  # 영상이 없으면 여기서 실패
     caption = open(cap, encoding="utf-8").read().strip()
     link = ig_publish(os.environ["IG_TOKEN"], caption, dry_run,
-                      media_type="REELS", share_to_feed="true", video_url=url)
+                      media_type="REELS", share_to_feed="true", video_url=url,
+                      **({"is_ai_generated": "true"} if os.path.exists(f"extra/{day}_ai.txt") else {}))
     log(f"{day} 녹음 릴스 게시: {link}")
     if not dry_run:
         with open(marker, "w", encoding="utf-8") as f:

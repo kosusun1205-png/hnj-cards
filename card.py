@@ -361,6 +361,17 @@ def _wait(base, cid, token, field, ok, tries):
     raise RuntimeError("컨테이너 준비 시간 초과")
 
 
+def extra_left_warning(today):
+    """예약된 일일사주 영상이 3일 치 이하로 남으면 다음 분량을 요청하라고 알림."""
+    days = [f[:8] for f in os.listdir("extra") if len(f) == 12 and f.endswith(".txt") and f[:8].isdigit()]
+    last = datetime.strptime(max(days), "%Y%m%d").date()
+    left = (last - today).days
+    if 0 <= left <= 3:
+        return (f"일일사주 영상이 {last.month}월 {last.day}일분까지 있어요 (남은 {left}일). "
+                f"Claude에게 '다음 10일치'라고 말해 주세요.")
+    return None
+
+
 def ig_publish(token, caption, dry_run=False, **media):
     """인스타 게시 (이미지: image_url / 릴스: media_type=REELS, video_url). 게시물 주소 반환."""
     me = _api(IG_API, "GET", "me", fields="user_id,username", access_token=token)
@@ -524,6 +535,7 @@ def publish(today, sha, media_sha="", dry_run=False):
         warns.append(token_check(IG_API, "ig_refresh_token", secrets["IG_TOKEN"], "인스타"))
         if th_token:
             warns.append(token_check(TH_API, "th_refresh_token", th_token, "스레드"))
+    warns.append(extra_left_warning(today))
     warns = [w for w in warns if w]
 
     tag = "테스트 " if dry_run else ""
