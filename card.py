@@ -553,7 +553,7 @@ def publish(today, sha, media_sha="", dry_run=False):
     body += "\n\n──────── 댓글 답글용 (해당 띠 줄 복사) ────────\n" + cheat
     np = os.path.join("cards", f"{today:%Y%m%d}_night.txt")
     if os.path.exists(np):
-        body += ("\n\n──────── 오늘 밤 9시쯤 스레드에 올라갈 글 ────────\n"
+        body += ("\n\n──────── 오늘 밤 스레드 글 (아침 블로그 요약이 만들어지면 그걸로 바뀜) ────────\n"
                  + open(np, encoding="utf-8").read())
     notify_owner(secrets, today, subject, body + "\n\n──────── 캡션 ────────\n" + caption, jpg)
     if failed:

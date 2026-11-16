@@ -1,4 +1,6 @@
-"""스레드 밤 글: 그날 일진의 상징 하나로 쓰는 짧고 쉬운 위로의 글 (글만, 이미지 없음).
+"""스레드 밤 글: 그날 블로그 글의 요약 (없으면 일진의 상징 하나로 쓰는 짧고 쉬운 위로의 글). 글만, 이미지 없음.
+
+- PC의 블로그 자동 작성이 아침에 cards/YYYYMMDD_night_blog.txt 를 올려 두면 그 글을 게시
 
 - 아침 자동 게시 때 미리 만들어 cards/YYYYMMDD_night.txt 로 저장 (알림 메일로 미리보기)
 - 밤 워크플로가 그 글을 스레드에 게시, 게시 기록 cards/YYYYMMDD_posted_night.txt
@@ -113,8 +115,17 @@ def write_night(today, angle=""):
     return final
 
 
+def blog_night_path(today):
+    """PC의 블로그 자동 작성(daily_blog.py)이 아침에 올려 두는 블로그 요약 글."""
+    return os.path.join("cards", f"{today:%Y%m%d}_night_blog.txt")
+
+
 def make_night(today):
-    """밤 글 생성 (이미 있으면 그대로 둠 → 미리보기한 글이 그대로 게시됨)."""
+    """밤 글: 블로그 요약 글이 있으면 그걸 쓰고, 없으면 위로 글 생성
+    (이미 있으면 그대로 둠 → 미리보기한 글이 그대로 게시됨)."""
+    b = blog_night_path(today)
+    if os.path.exists(b):
+        return open(b, encoding="utf-8").read().strip()
     p = night_path(today)
     if os.path.exists(p):
         return open(p, encoding="utf-8").read()
